@@ -18,20 +18,22 @@ public static class SpinLockUtil
 
     /// <summary>
     ///     According to https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/variables#atomicity-of-variable-references
-    ///     reads of `int`-s are atomic
+    ///     reads of `int`-s are atomic, but we want to be sure that no instruction reordering or cache happens,
+    ///     hence we use <see cref="Thread.VolatileRead"/>
     /// </summary>
     public static bool IsLockedOnce(ref int isLocked)
     {
-        return isLocked == True;
+        return Thread.VolatileRead(address: ref isLocked) == True;
     }
 
     /// <summary>
     ///     According to https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/variables#atomicity-of-variable-references
-    ///     reads of `int`-s are atomic
+    ///     reads of `int`-s are atomic, but we want to be sure that no instruction reordering or cache happens,
+    ///     hence we use <see cref="Thread.VolatileRead"/>
     /// </summary>
     public static bool IsUnlocked(ref int isLocked)
     {
-        return isLocked == False;
+        return Thread.VolatileRead(address: ref isLocked) == False;
     }
 
     public static bool TryLock(ref int isLocked)
