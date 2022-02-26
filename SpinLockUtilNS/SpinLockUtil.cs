@@ -16,14 +16,36 @@ public static class SpinLockUtil
                 break;
     }
 
-    /// <summary>
-    ///     According to https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/variables#atomicity-of-variable-references
-    ///     reads of `int`-s are atomic, but we want to be sure that no instruction reordering or cache happens,
-    ///     hence we use <see cref="Thread.VolatileRead"/>
-    /// </summary>
     public static bool IsLockedOnce(ref int isLocked)
     {
-        return Thread.VolatileRead(address: ref isLocked) == True;
+        return IsStateExpected(
+            currentStateRef: ref isLocked,
+            expectedCurrentState: True
+        );
+    }
+
+    public static bool IsStateExpected(
+        ref int currentStateRef,
+        int expectedCurrentState
+    )
+    {
+        return ReadAtomically(currentStateRef: ref currentStateRef) == expectedCurrentState;
+    }
+
+    public static bool IsStateNotEqualTo(
+        ref int currentStateRef,
+        int stateItShouldNotEqualTo
+    )
+    {
+        return ReadAtomically(currentStateRef: ref currentStateRef) != stateItShouldNotEqualTo;
+    }
+
+    public static bool IsUnlocked(ref int isLocked)
+    {
+        return IsStateExpected(
+            currentStateRef: ref isLocked,
+            expectedCurrentState: False
+        );
     }
 
     /// <summary>
@@ -31,18 +53,31 @@ public static class SpinLockUtil
     ///     reads of `int`-s are atomic, but we want to be sure that no instruction reordering or cache happens,
     ///     hence we use <see cref="Thread.VolatileRead"/>
     /// </summary>
-    public static bool IsUnlocked(ref int isLocked)
+    public static int ReadAtomically(ref int currentStateRef)
     {
-        return Thread.VolatileRead(address: ref isLocked) == False;
+        return Thread.VolatileRead(address: ref currentStateRef);
     }
 
     public static bool TryLock(ref int isLocked)
     {
+        return TrySetState(
+            currentStateRef: ref isLocked,
+            expectedCurrentState: False,
+            newState: True
+        );
+    }
+
+    public static bool TrySetState(
+        ref int currentStateRef,
+        int expectedCurrentState,
+        int newState
+    )
+    {
         return Interlocked.CompareExchange(
-            location1: ref isLocked,
-            value: True,
-            comparand: False
-        ) == False;
+            comparand: expectedCurrentState,
+            location1: ref currentStateRef,
+            value: newState
+        ) == expectedCurrentState;
     }
 
     public static void UnlockOne(ref int isLocked)
